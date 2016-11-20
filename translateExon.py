@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from codonTable import codonTable
 
-def translate(cds, startPhase, endPhase, find_orfs=False):
+def translate(cds, startPhase, endPhase, find_orfs=True):
 	'''
 	Translate a nucleotide sequence into a protein sequence.
 
@@ -46,7 +46,10 @@ def translate(cds, startPhase, endPhase, find_orfs=False):
 		return result
 	elif (startPhase<0) and (endPhase>=0):
 		result = ''
-		cds = cds[:-endPhase]
+		if endPhase==0:
+			pass
+		else:
+			cds = cds[:-endPhase]
 		while len(cds)>=3:
 			aa = codonTable[cds[-3:]]
 			result = aa + result
@@ -96,118 +99,84 @@ def findORF(sequence):
 	else:
 		return False
 
-def findStartExon(transcript_df, start_phase='startPhase', end_phase='endPhase', rank='rank'):
+def newFindStartExon(transcript_df, start_phase='startPhase', end_phase='endPhase', rank='rank'):
 	'''
-	Get the rank of the exon containing the start codon.
+	Get the rank of the exon containing the start codon. Revised version: the program looks for
+	the first exon that satisfies the first criterion, then moves onto the next criterion:
+		1. Exon has (start_phase, end_phase) = (-1, >=0)
+		2. Exon has (start_phase, end_phase) = (>=0, x) and all previous exons are (-1, -1)
+		3. All exons are (-1, -1) and exon contains the longest ORF in the transcript
 
 	INPUT
-		transcript_df : pandas DataFrame, containing the exons corresponding
-			to a single transcript. Must have the rank, startPhase, and endPhase
-			columns.
-
-		start_phase, end_phase, rank : strings, names of the columns containing
-			the relevant information
+		transcript_df : pandas DataFrame, with exons in rank order
+		start_phase, end_phase, rank : names of the columns in *transcript_df*
 
 	RETURNS
-		int, the rank of the exon with the start codon, or 0 if start codon is not
-			found.
+		int, the index of the start exon
 
 	'''
 	transcript_df = transcript_df.sort_values(by=rank)
 	transcript_df = transcript_df.set_index(rank, drop=False)
-	highest_exon_rank = max(transcript_df.index)
+	highest_rank = max(transcript_df.index)
 
-	if len(transcript_df)==1:
+	if transcript_df.ix[1,'startPhase']>=0:
 		return 1
-	for i in transcript_df.index:
-		if transcript_df.ix[i,start_phase]<0 and transcript_df.ix[i,end_phase]>=0:
-			return i
-		elif transcript_df.ix[i,start_phase]<0 and i<highest_exon_rank and transcript_df.ix[i+1,end_phase]>=0:
-			return i+1
-	if all([i>=0 for i in transcript_df[start_phase].values.tolist()]) and ((transcript_df.ix[1,'sequence'][0:3]=='ATG') or (transcript_df.ix[1,'sequence'][0:3]=='AUG')):
-		return 1
-	if all([i>=0 for i in transcript_df[start_phase].values.tolist()]):
-		return 1
-	elif all([i<0 for i in transcript_df[start_phase].values.tolist()]):
-		orf_lengths = []
+	elif all([transcript_df['startPhase']<0][0]) and all([transcript_df['endPhase']<0][0]):
+		exon_orfs = [findORF(transcript_df.ix[i,'sequence']) for i in transcript_df.index]
+		for i in range(len(exon_orfs)):
+			if exon_orfs[i]==False:
+				exon_orfs[i]=(0,0,0)
+		if (not exon_orfs) or (not exon_orfs[0]) or (len(exon_orfs)==0):
+			return False
+		else:
+			return exon_orfs.index(max(exon_orfs, key=lambda i: i[2]))+1
+	else:
 		for i in transcript_df.index:
-			if findOpenReadingFrame(transcript_df.ix[i,'sequence']):
-				orf_lengths.append(findLargestOpenReadingFrame(transcript_df.ix[i,'sequence'])[2])
-			else:
-				orf_lengths.append(0)
-		return orf_lengths.index(max(orf_lenths))+1
+			if (transcript_df.ix[i,'startPhase']<0) and (transcript_df.ix[i,'endPhase']>=0):
+				return i
+		return False
+
+def newTranslateDF(transcript_df, start_phase='startPhase', end_phase='endPhase', rank='rank'):
+	'''
+	Adds a new column, ``protein'', to the DataFrame *transcript_df*.
+
+	INPUT
+		transcript_df : pandas DataFrame, indices are exons corresponding to that transcript. Must
+			have phase and rank information.
+
+		start_phase, end_phase, rank : strings, names of the corresponding columns in *transcript_df*
+
+	RETURNS
+		pandas DataFrame, a copy of *transcript_df* with the new ``protein'' column
+
+	'''
+	start_exon = newFindStartExon(transcript_df, start_phase=start_phase, end_phase=end_phase, rank=rank)
+	if not start_exon:
+		peptides = pd.Series(['' for i in transcript_df.index])
+		transcript_df['protein']=peptides
+		return transcript_df
+	peptides = pd.Series([])
 	for i in transcript_df.index:
-		if transcript_df.ix[i,start_phase]==0 and transcript_df.ix[i,end_phase]<0:
-			return i
-	return 0
-
-
-def findOpenReadingFrame(cds):
-    '''
-    If an open reading frame - an in-frame start codon and stop codon- exist
-    in the sequence, returns it and its length.
-    '''
-    for i in range(len(cds)-6):
-        if (cds[i:(i+3)]=='AUG') or (cds[i:(i+3)]=='ATG'):
-            putative_orf = cds[i:]
-            for j in range(len(putative_orf)/3-1):
-                if codonTable[putative_orf[(j*3):((j+1)*3)]]=='X':
-                    return j*3
-    return False
- 
-def findLargestOpenReadingFrame(cds):
-    '''
-    Looks for open reading frames and returns the start position, stop position,
-    and length of the longest one it can find. If it cannot find any open reading
-    frames, returns *False*.
-    '''
-    orfs = []
-    for i in range(len(cds)-6):
-        if (cds[i:(i+3)]=='AUG') or (cds[i:(i+3)]=='ATG'):
-            putative_orf=cds[i:]
-            for j in range(len(putative_orf)/3-1):
-                if codonTable[putative_orf[(j*3):((j+1)*3)]]=='X':
-                    orfs.append((i, i+(j*3), j*3))
-    if len(orfs)==0:
-        return False
-    orfs=sorted(orfs, key=lambda u: u[2])
-    return orfs[-1]
- 
-def translate_df(transcript_df, start_phase='startPhase', end_phase='endPhase', rank='rank'):
-    '''
-    Adds a new column, ``protein'', to the DataFrame *transcript_df* that
-    consists of the translated sequence for that exon.
-    '''
-    start_exon = findStartExon(transcript_df, rank=rank, start_phase=start_phase, end_phase=end_phase)
-    peptides = pd.Series([])
-    for i in transcript_df.index:
-        if i < start_exon:
-            peptides.ix[i]=''
-        elif i==start_exon:
-            if transcript_df.ix[i,end_phase]==-1:
-                cds=transcript_df.ix[i,'sequence']
-                start_pos, stop_pos, length = findLargestOpenReadingFrame(cds)
-                cds=cds[start_pos:]
-                peptides.ix[i] = translate(cds, startPhase=0, endPhase=0)
-            else:
-                cds=transcript_df.ix[i,'sequence']
-                peptides.ix[i]=translate(cds,startPhase=-1,endPhase=transcript_df.ix[i,end_phase])
-        else:
-            if transcript_df.ix[i-1,end_phase]<0:
-                peptides.ix[i] = ''
-            else:
-                cds=transcript_df.ix[i,'sequence']
-                _start_phase=transcript_df.ix[i,start_phase]
-                prev_cds=transcript_df.ix[i-1,'sequence']
-                if _start_phase == 0:
-                    prev_cds=''
-                else:
-                    prev_cds = prev_cds[(-_start_phase):]
-                cds = '%s%s' % (prev_cds, cds)
-                peptides.ix[i] = translate(cds, startPhase=0, endPhase=0)
-    transcript_df['protein']=peptides
-    print transcript_df
-    return transcript_df
+		if i < start_exon:
+			peptides.ix[i]=''
+		elif i==start_exon:
+			peptides.ix[i]=translate(transcript_df.ix[i,'sequence'], transcript_df.ix[i,start_phase], transcript_df.ix[i,end_phase])
+		else:
+			peptide = translate(transcript_df.ix[i,'sequence'], transcript_df.ix[i,start_phase], transcript_df.ix[i,end_phase])
+			if i>1: #get the first codon, part of which lies on the previous exon
+				if transcript_df.ix[i,start_phase]>0:
+					_start_phase = transcript_df.ix[i,start_phase]
+					prev_cds = transcript_df.ix[i-1,'sequence']
+					first_codon=prev_cds[-_start_phase:]
+					first_codon = first_codon + transcript_df.ix[i,'sequence'][:(3-_start_phase)]
+					peptide = codonTable[first_codon] + peptide
+				else:
+					pass
+			peptides.ix[i]=peptide
+	transcript_df['protein']=peptides
+	print transcript_df ##debugging
+	print "START EXON: %d\n\n" % start_exon ##debugging
+	return transcript_df
 
 def translateTranscriptFile(transcriptFile, rank='rank', start_phase='startPhase', end_phase='endPhase'):
 	'''
@@ -224,15 +193,23 @@ def translateTranscriptFile(transcriptFile, rank='rank', start_phase='startPhase
 	f = pd.read_csv(transcriptFile)
 	f = f.sort_values(by=rank)
 	f = f.set_index(rank, drop=False)
-	f = translate_df(f, rank=rank, start_phase=start_phase, end_phase=end_phase)
+	f = newTranslateDF(f, rank=rank, start_phase=start_phase, end_phase=end_phase)
 	f.to_csv(transcriptFile, index=False)
 
 if __name__=='__main__':
 	parser = argparse.ArgumentParser(description='given a CSV with exon sequences, translate them with the correct phase')
-	parser.add_argument('-i', '--infile', type=str, help='file with exons corresponding to a single transcript', required=True)
+	parser.add_argument('infile', type=str, help='file or directory of files with exons corresponding to a single transcript')
 	parser.add_argument('--startphase', type=str, help="name of the start phase column. default: ``startPhase''.", default='startPhase')
 	parser.add_argument('--endphase', type=str, help="name of the end phase column. default: ``endPhase''.", default='endPhase')
 	parser.add_argument('--rank', type=str, help="name of the rank column. default: ``rank''.", default='rank')
 
 	args = parser.parse_args()
-	translateTranscriptFile(args.infile, rank=args.rank, start_phase=args.startphase, end_phase=args.endphase)
+	if os.path.isdir(args.infile):
+		files = [i for i in os.listdir(args.infile) if '.csv' in i]
+		for u in files:
+			try:
+				translateTranscriptFile('%s/%s' % (args.infile,u), rank=args.rank, start_phase=args.startphase, end_phase=args.endphase)
+			except pandas.io.common.CParserError:
+				continue
+	else:
+		translateTranscriptFile(args.infile, rank=args.rank, start_phase=args.startphase, end_phase=args.endphase)
