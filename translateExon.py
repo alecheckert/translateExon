@@ -54,8 +54,10 @@ def translate(cds, startPhase, endPhase, find_orfs=True):
 			aa = codonTable[cds[-3:]]
 			result = aa + result
 			if aa=='M':
-				break
+				#break #trying something out
+				pass
 			cds = cds[:-3]
+		result = result[result.find('M'):]
 		return result
 	else:
 		if find_orfs:
