@@ -152,6 +152,7 @@ def newTranslateDF(transcript_df, start_phase='startPhase', end_phase='endPhase'
 		pandas DataFrame, a copy of *transcript_df* with the new ``protein'' column
 
 	'''
+	print transcript_df
 	start_exon = newFindStartExon(transcript_df, start_phase=start_phase, end_phase=end_phase, rank=rank)
 	if not start_exon:
 		peptides = pd.Series(['' for i in transcript_df.index])
@@ -176,7 +177,7 @@ def newTranslateDF(transcript_df, start_phase='startPhase', end_phase='endPhase'
 					pass
 			peptides.ix[i]=peptide
 	transcript_df['protein']=peptides
-	print transcript_df ##debugging
+	#print transcript_df ##debugging
 	print "START EXON: %d\n\n" % start_exon ##debugging
 	return transcript_df
 
@@ -194,6 +195,7 @@ def translateTranscriptFile(transcriptFile, rank='rank', start_phase='startPhase
 	'''
 	f = pd.read_csv(transcriptFile)
 	f = f.sort_values(by=rank)
+	f = f.drop_duplicates('rank')
 	f = f.set_index(rank, drop=False)
 	f = newTranslateDF(f, rank=rank, start_phase=start_phase, end_phase=end_phase)
 	f.to_csv(transcriptFile, index=False)
@@ -211,7 +213,7 @@ if __name__=='__main__':
 		for u in files:
 			try:
 				translateTranscriptFile('%s/%s' % (args.infile,u), rank=args.rank, start_phase=args.startphase, end_phase=args.endphase)
-			except pandas.io.common.CParserError:
+			except pd.io.common.CParserError:
 				continue
 	else:
 		translateTranscriptFile(args.infile, rank=args.rank, start_phase=args.startphase, end_phase=args.endphase)

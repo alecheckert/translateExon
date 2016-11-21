@@ -25,4 +25,13 @@ for i in codonTable:
 	newCodonTable[i] = codonTable[i]
 	newCodonTable[i.replace('U','T')]=codonTable[i]
 
+for i in newCodonTable.keys():
+	newCodonTable[i[:2]+'N']='Z'
+	newCodonTable[i[0]+'N'+i[2]]='Z'
+	newCodonTable['N'+i[1:]]='Z'
+	newCodonTable[i[0]+'NN']='Z'
+	newCodonTable['N'+i[1]+'N']='Z'
+	newCodonTable['NN'+i[2]]='Z'
+	newCodonTable['NNN']='Z'
+
 codonTable = newCodonTable
