@@ -22,7 +22,7 @@ def translate(cds, startPhase, endPhase, find_orfs=True):
 			an empty string.
 
 	INPUT
-		cds : string, nucleotide sequence to be translated
+		cds : string, nucleotide sequqence to be translated
 		startPhase : int, starting phase (number of nucleotides on first codon
 			that lie on the previous exon)
 		endPhase : int, ending phase (number of nucleotides of last exon that
@@ -57,7 +57,15 @@ def translate(cds, startPhase, endPhase, find_orfs=True):
 				#break #trying something out
 				pass
 			cds = cds[:-3]
-		result = result[result.find('M'):]
+
+		if 'X' in result:
+			while 'X' in result:
+				result = result[result.find('X')+1:]
+				if 'M' not in result:
+					break
+				else:
+					result = result[result.find('M'):]
+		#result = result[result.find('M'):]
 		return result
 	else:
 		if find_orfs:
