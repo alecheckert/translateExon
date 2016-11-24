@@ -65,13 +65,16 @@ def translate(cds, startPhase, endPhase, find_orfs=True):
 					break
 				else:
 					result = result[result.find('M'):]
-		#result = result[result.find('M'):]
+		else:
+			result = result[result.find('M'):]
 		return result
 	else:
 		if find_orfs:
 			if findORF(cds):
 				start_pos, stop_pos, orf_length = findORF(cds)
-				translate(cds[start_pos:stop_pos], startPhase=0, endPhase=0)
+				#print cds[start_pos:stop_pos]
+				#print translate(cds[start_pos:stop_pos], startPhase=0, endPhase=0)
+				return translate(cds[start_pos:stop_pos], startPhase=0, endPhase=0)
 			else:
 				return ''
 		else:
@@ -105,7 +108,7 @@ def findORF(sequence):
 				orfs.append((start_pos, stop_pos, stop_pos-start_pos))
 	if len(orfs)>0:
 		orfs = sorted(orfs, key=lambda i: i[2], reverse=False)
-		return orfs[0]
+		return orfs[-1]
 	else:
 		return False
 
