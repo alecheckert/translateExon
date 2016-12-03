@@ -41,5 +41,9 @@ if __name__=='__main__':
 	parser.add_argument('infile', type=str, help="CSV input file. must contain `transcript_id', `gene_id', and `transcript_length' columns")
 	parser.add_argument('outfile', type=str, help="file to write results to")
 	args = parser.parse_args()
-	getLongestTranscript(args.infile, args.outfile)
+	try:
+		getLongestTranscript(args.infile, args.outfile)
+	except (KeyError, ValueError) as e2:
+		print "Error: input file must contains columns `gene_id', `transcript_id', and `transcript_length'."
+		exit(1)
 	print "Finished"
