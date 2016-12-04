@@ -21,6 +21,7 @@ def catCSV(dir_name, outname, no_header=False, exclude=[]):
 		Pandas DataFrame : the concatenated data
 
 	'''
+	if not exclude: exclude=[]
 	if not os.path.isdir(dir_name):
 		print "Could not find the directory %s in the current working directory." % dir_name
 		exit(1)
@@ -35,8 +36,8 @@ def catCSV(dir_name, outname, no_header=False, exclude=[]):
 				f_data = [pd.read_csv(i, header=False) for i in fs]
 			else:
 				f_data = [pd.read_csv(i) for i in fs]
+			print "Got here" #debug
 			result = pd.DataFrame(columns=f_data[0].columns)
-
 			for f in range(len(f_data)):
 				result = pd.concat([result, f_data[f]])
 				print "Concatenated file %s" % fs[f]
