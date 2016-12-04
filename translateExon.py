@@ -32,6 +32,8 @@ def translate(cds, startPhase, endPhase, find_orfs=True):
 		string, translated sequence
 
 	'''
+	startPhase = int(startPhase)  ##debugging
+	endPhase = int(endPhase)  ##debugging
 	if startPhase>=0:
 		if startPhase==0:
 			pass
@@ -179,7 +181,7 @@ def newTranslateDF(transcript_df, start_phase='startPhase', end_phase='endPhase'
 			peptide = translate(transcript_df.ix[i,'sequence'], transcript_df.ix[i,start_phase], transcript_df.ix[i,end_phase])
 			if i>1: #get the first codon, part of which lies on the previous exon
 				if transcript_df.ix[i,start_phase]>0:
-					_start_phase = transcript_df.ix[i,start_phase]
+					_start_phase = int(transcript_df.ix[i,start_phase])
 					prev_cds = transcript_df.ix[i-1,'sequence']
 					first_codon=prev_cds[-_start_phase:]
 					first_codon = first_codon + transcript_df.ix[i,'sequence'][:(3-_start_phase)]
@@ -188,7 +190,6 @@ def newTranslateDF(transcript_df, start_phase='startPhase', end_phase='endPhase'
 					pass
 			peptides.ix[i]=peptide
 	transcript_df['protein']=peptides
-	#print transcript_df ##debugging
 	print "START EXON: %d\n\n" % start_exon ##debugging
 	return transcript_df
 
