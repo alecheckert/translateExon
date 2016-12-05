@@ -5,9 +5,8 @@ translateExon: a Python utility for translating protein-encoding exons in phase
 Motivation.
 ~~~~~~~~~~~
 
-Eukaryotic proteins are frequently encoded in small pieces of information scattered
-over large regions of genomic space, known as exons. The phase of an exon determines
-the reading frame of the exon. This tool is designed to translate independent 
+Eukaryotic proteins are frequently encoded in small pieces of information - exons - scattered over large regions of genomic space. The phase of an exon determines
+its reading frame. This tool is designed to translate independent 
 exon sequences with the appropriate phase information.
 
 Personal Workflow.
