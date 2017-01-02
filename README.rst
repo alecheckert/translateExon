@@ -9,7 +9,7 @@ Eukaryotic proteins are frequently encoded in small pieces of information - exon
 its reading frame. This tool is designed to translate independent 
 exon sequences with the appropriate phase information.
 
-Personal Workflow.
+Workflow.
 ~~~~~~~~~~~~~~~~~~
 
 The following workflow is recommended in order to analyze exons from individual
